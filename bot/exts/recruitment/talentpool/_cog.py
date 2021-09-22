@@ -258,7 +258,7 @@ class TalentPool(Cog, name="Talentpool"):
             return
 
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maxiumum allowed characters for the reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: Maximum allowed characters for the reason is {REASON_MAX_CHARS}.")
             return
 
         # Manual request with `raise_for_status` as False because we want the actual response
@@ -351,7 +351,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def edit_reason_command(self, ctx: Context, nomination_id: int, actor: MemberOrUser, *, reason: str) -> None:
         """Edits the reason of a specific nominator in a specific active nomination."""
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maxiumum allowed characters for the reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: Maximum allowed characters for the reason is {REASON_MAX_CHARS}.")
             return
 
         try:
@@ -386,7 +386,7 @@ class TalentPool(Cog, name="Talentpool"):
     async def edit_end_reason_command(self, ctx: Context, nomination_id: int, *, reason: str) -> None:
         """Edits the unnominate reason for the nomination with the given `id`."""
         if len(reason) > REASON_MAX_CHARS:
-            await ctx.send(f":x: Maxiumum allowed characters for the end reason is {REASON_MAX_CHARS}.")
+            await ctx.send(f":x: Maximum allowed characters for the end reason is {REASON_MAX_CHARS}.")
             return
 
         try:
