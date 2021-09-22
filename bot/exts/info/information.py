@@ -72,7 +72,8 @@ class Information(Cog):
         """Return additional server info only visible in moderation channels."""
         talentpool_info = ""
         if cog := self.bot.get_cog("Talentpool"):
-            talentpool_info = f"Nominated: {len(cog.watched_users)}\n"
+            num_nominated = len(cog.cache) if cog.cache else "-"
+            talentpool_info = f"Nominated: {num_nominated}\n"
 
         bb_info = ""
         if cog := self.bot.get_cog("Big Brother"):
@@ -95,7 +96,7 @@ class Information(Cog):
             {python_general.mention} cooldown: {python_general.slowmode_delay}s
         """)
 
-    @has_any_role(*constants.STAFF_ROLES)
+    @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="roles")
     async def roles_info(self, ctx: Context) -> None:
         """Returns a list of all roles and their corresponding IDs."""
@@ -115,7 +116,7 @@ class Information(Cog):
 
         await LinePaginator.paginate(role_list, ctx, embed, empty=False)
 
-    @has_any_role(*constants.STAFF_ROLES)
+    @has_any_role(*constants.STAFF_PARTNERS_COMMUNITY_ROLES)
     @command(name="role")
     async def role_info(self, ctx: Context, *roles: Union[Role, str]) -> None:
         """
@@ -221,8 +222,13 @@ class Information(Cog):
         await ctx.send(embed=embed)
 
     @command(name="user", aliases=["user_info", "member", "member_info", "u"])
-    async def user_info(self, ctx: Context, user: MemberOrUser = None) -> None:
+    async def user_info(self, ctx: Context, user_or_message: Union[MemberOrUser, Message] = None) -> None:
         """Returns info about a user."""
+        if isinstance(user_or_message, Message):
+            user = user_or_message.author
+        else:
+            user = user_or_message
+
         if user is None:
             user = ctx.author
 
@@ -232,7 +238,7 @@ class Information(Cog):
             return
 
         # Will redirect to #bot-commands if it fails.
-        if in_whitelist_check(ctx, roles=constants.STAFF_ROLES):
+        if in_whitelist_check(ctx, roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES):
             embed = await self.create_user_embed(ctx, user)
             await ctx.send(embed=embed)
 
@@ -454,11 +460,12 @@ class Information(Cog):
         # remove trailing whitespace
         return out.rstrip()
 
-    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_ROLES)
-    @group(invoke_without_command=True)
-    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_ROLES)
-    async def raw(self, ctx: Context, *, message: Message, json: bool = False) -> None:
-        """Shows information about the raw API response."""
+    async def send_raw_content(self, ctx: Context, message: Message, json: bool = False) -> None:
+        """
+        Send information about the raw API response for a `discord.Message`.
+
+        If `json` is True, send the information in a copy-pasteable Python format.
+        """
         if ctx.author not in message.channel.members:
             await ctx.send(":x: You do not have permissions to see the channel this message is in.")
             return
@@ -494,10 +501,17 @@ class Information(Cog):
         for page in paginator.pages:
             await ctx.send(page, allowed_mentions=AllowedMentions.none())
 
+    @cooldown_with_role_bypass(2, 60 * 3, BucketType.member, bypass_roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
+    @group(invoke_without_command=True)
+    @in_whitelist(channels=(constants.Channels.bot_commands,), roles=constants.STAFF_PARTNERS_COMMUNITY_ROLES)
+    async def raw(self, ctx: Context, message: Message) -> None:
+        """Shows information about the raw API response."""
+        await self.send_raw_content(ctx, message)
+
     @raw.command()
     async def json(self, ctx: Context, message: Message) -> None:
         """Shows information about the raw API response in a copy-pasteable Python format."""
-        await ctx.invoke(self.raw, message=message, json=True)
+        await self.send_raw_content(ctx, message, json=True)
 
 
 def setup(bot: Bot) -> None:

@@ -11,8 +11,11 @@ from dateutil.parser import isoparse
 from discord.ext.commands import Cog, Context, Greedy, group
 
 from bot.bot import Bot
-from bot.constants import Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES, Roles, STAFF_ROLES
-from bot.converters import Duration, UserMentionOrID
+from bot.constants import (
+    Guild, Icons, MODERATION_ROLES, POSITIVE_REPLIES,
+    Roles, STAFF_PARTNERS_COMMUNITY_ROLES
+)
+from bot.converters import Duration, UnambiguousUser
 from bot.pagination import LinePaginator
 from bot.utils import time
 from bot.utils.checks import has_any_role_check, has_no_roles_check
@@ -27,7 +30,7 @@ WHITELISTED_CHANNELS = Guild.reminder_whitelist
 MAXIMUM_REMINDERS = 5
 
 Mentionable = t.Union[discord.Member, discord.Role]
-ReminderMention = t.Union[UserMentionOrID, discord.Role]
+ReminderMention = t.Union[UnambiguousUser, discord.Role]
 
 
 class Reminders(Cog):
@@ -111,7 +114,7 @@ class Reminders(Cog):
 
         If mentions aren't allowed, also return the type of mention(s) disallowed.
         """
-        if await has_no_roles_check(ctx, *STAFF_ROLES):
+        if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
             return False, "members/roles"
         elif await has_no_roles_check(ctx, *MODERATION_ROLES):
             return all(isinstance(mention, discord.Member) for mention in mentions), "roles"
@@ -137,7 +140,7 @@ class Reminders(Cog):
         """Converts Role and Member ids to their corresponding objects if possible."""
         guild = self.bot.get_guild(Guild.id)
         for mention_id in mention_ids:
-            if (mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id))):
+            if mentionable := (guild.get_member(mention_id) or guild.get_role(mention_id)):
                 yield mentionable
 
     def schedule_reminder(self, reminder: dict) -> None:
@@ -214,7 +217,20 @@ class Reminders(Cog):
     async def remind_group(
         self, ctx: Context, mentions: Greedy[ReminderMention], expiration: Duration, *, content: str
     ) -> None:
-        """Commands for managing your reminders."""
+        """
+        Commands for managing your reminders.
+
+        The `expiration` duration of `!remind new` supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to set a reminder that expires in 3 days and 1 minute, you can do `!remind new 3d1M Do something`.
+        """
         await self.new_reminder(ctx, mentions=mentions, expiration=expiration, content=content)
 
     @remind_group.command(name="new", aliases=("add", "create"))
@@ -224,10 +240,20 @@ class Reminders(Cog):
         """
         Set yourself a simple reminder.
 
-        Expiration is parsed per: http://strftime.org/
+        The `expiration` duration supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to set a reminder that expires in 3 days and 1 minute, you can do `!remind new 3d1M Do something`.
         """
-        # If the user is not staff, we need to verify whether or not to make a reminder at all.
-        if await has_no_roles_check(ctx, *STAFF_ROLES):
+        # If the user is not staff, partner or part of the python community,
+        # we need to verify whether or not to make a reminder at all.
+        if await has_no_roles_check(ctx, *STAFF_PARTNERS_COMMUNITY_ROLES):
 
             # If they don't have permission to set a reminder in this channel
             if ctx.channel.id not in WHITELISTED_CHANNELS:
@@ -346,7 +372,20 @@ class Reminders(Cog):
 
     @remind_group.group(name="edit", aliases=("change", "modify"), invoke_without_command=True)
     async def edit_reminder_group(self, ctx: Context) -> None:
-        """Commands for modifying your current reminders."""
+        """
+        Commands for modifying your current reminders.
+
+        The `expiration` duration supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
+        """
         await ctx.send_help(ctx.command)
 
     @edit_reminder_group.command(name="duration", aliases=("time",))
@@ -354,7 +393,16 @@ class Reminders(Cog):
         """
         Edit one of your reminder's expiration.
 
-        Expiration is parsed per: http://strftime.org/
+        The `expiration` duration supports the following symbols for each unit of time:
+        - years: `Y`, `y`, `year`, `years`
+        - months: `m`, `month`, `months`
+        - weeks: `w`, `W`, `week`, `weeks`
+        - days: `d`, `D`, `day`, `days`
+        - hours: `H`, `h`, `hour`, `hours`
+        - minutes: `M`, `minute`, `minutes`
+        - seconds: `S`, `s`, `second`, `seconds`
+
+        For example, to edit a reminder to expire in 3 days and 1 minute, you can do `!remind edit duration 1234 3d1M`.
         """
         await self.edit_reminder(ctx, id_, {'expiration': expiration.isoformat()})
 
