@@ -64,7 +64,9 @@ class SingleRoleButton(discord.ui.Button):
         """Update the member's role and change button text to reflect current text."""
         if isinstance(interaction.user, discord.User):
             await interaction.message.delete()
+            self.view.stop()
             return
+
         await members.handle_role_change(
             interaction.user,
             interaction.user.remove_roles if self.assigned else interaction.user.add_roles,
@@ -91,6 +93,7 @@ class SingleRoleButton(discord.ui.Button):
             await interaction.message.edit(view=self.view)
         except discord.NotFound:
             log.debug("Subscribe message for %s removed before buttons could be updated", interaction.user)
+            self.view.stop()
 
 
 class Subscribe(commands.Cog):
