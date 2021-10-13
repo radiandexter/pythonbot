@@ -87,7 +87,10 @@ class SingleRoleButton(discord.ui.Button):
             for button in self.view.children
         ]
         self.view.children = view_list
-        await interaction.message.edit(view=self.view)
+        try:
+            await interaction.message.edit(view=self.view)
+        except discord.NotFound:
+            log.debug("Subscribe message for %s removed before buttons could be updated", interaction.user)
 
 
 class Subscribe(commands.Cog):
