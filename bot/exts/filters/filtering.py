@@ -158,6 +158,17 @@ class Filtering(Cog):
         return self.bot.get_cog("ModLog")
 
     @Cog.listener()
+    async def on_member_join(self, member: Member) -> None:
+        """Check if the joining member has a bad word in their name."""
+        await self.check_bad_words_in_name(member)
+
+    @Cog.listener()
+    async def on_member_update(self, before: Member, after: Member) -> None:
+        """If the member has updated their name, check if it has a bad word in it."""
+        if before.display_name != after.display_name:
+            await self.check_bad_words_in_name(after)
+
+    @Cog.listener()
     async def on_message(self, msg: Message) -> None:
         """Invoke message filter for new messages."""
         await self._filter_message(msg)
